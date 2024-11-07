@@ -1,0 +1,33 @@
+
+[build-system]
+requires = ["setuptools>=61.0", "versioningit"]
+build-backend = "setuptools.build_meta"
+
+
+# ----------------------------------------- setuptools -------------------------------------------
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+
+
+# ----------------------------------------- Project Metadata -------------------------------------
+#
+[project]
+version = "0.0.0.dev1"
+name = "ReleaseMan"
+dependencies = [
+    "rich >= 13.5",
+    "ActionMan == 0.0.0.dev24",
+    "GitHub-Contexts == 0.0.0.dev9",
+    "LoggerMan == 0.0.0.dev60",
+    "MDit == 0.0.0.dev31",
+    "HTMP == 0.0.0.dev5",
+    "PyLinks == 0.0.0.dev44",
+    "PySerials == 0.0.0.dev34",
+    "FileEx == 0.0.0.dev1",
+]
+requires-python = ">=3.10"
