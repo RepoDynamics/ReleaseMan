@@ -17,12 +17,12 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev1"
+version = "0.0.0.dev2"
 name = "ReleaseMan"
 dependencies = [
     "rich >= 13.5",
     "ActionMan == 0.0.0.dev24",
-    "GitHub-Contexts == 0.0.0.dev9",
+    "GitHub-Contexts == 0.0.0.dev10",
     "LoggerMan == 0.0.0.dev60",
     "MDit == 0.0.0.dev31",
     "HTMP == 0.0.0.dev5",
