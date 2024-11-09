@@ -48,15 +48,19 @@ runs:
         echo "::group::Environment Overview"
         python -m pip list
         echo "::endgroup::"
+    - name: Artifact Download
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
     - name: Action
       id: action
       env:
-        RD_PROMAN__ZENODO_TOKEN: ${{ inputs.zenodo-token }}
-        RD_PROMAN__GITHUB_CONTEXT: ${{ toJSON(github) }}
+        RD_RELEASEMAN__CONFIG: ${{ toJSON(github) }}
+        RD_RELEASEMAN__ZENODO_TOKEN: ${{ inputs.zenodo-token }}
       shell: bash
       run: |
         # Action
-        python -m proman
+        python -m releaseman
         python "${{ github.action_path }}/action/script/log.py" "3. Finalization"
         python "${{ github.action_path }}/action/script/log.py" "3.1. Report Upload"
 
