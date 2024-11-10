@@ -1,0 +1,2 @@
+class ReleaseManException(Exception):
+    pass

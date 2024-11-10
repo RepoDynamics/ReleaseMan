@@ -5,6 +5,26 @@ branding:
   color: blue
 
 inputs:
+  root-path:
+    description: Root path of the repository.
+    required: false
+    default: "."
+  output-path:
+    description: Temporary output path to use.
+    required: false
+    default: "./__releaseman_outputs__"
+  github-config:
+    description: Configurations for GitHub release
+    required: false
+    default: ""
+  zenodo-config:
+    description: Configurations for Zenodo release
+    required: false
+    default: ""
+  github-token:
+    description: A personal access token.
+    required: false
+    default: ""
   zenodo-token:
     description: A Zenodo API token.
     required: false
@@ -48,24 +68,17 @@ runs:
         echo "::group::Environment Overview"
         python -m pip list
         echo "::endgroup::"
-    - name: Artifact Download
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
     - name: Action
       id: action
       env:
-        RD_RELEASEMAN__CONFIG: ${{ toJSON(github) }}
+        RD_RELEASEMAN__ROOT_PATH: ${{ inputs.root-path }}
+        RD_RELEASEMAN__OUTPUT_PATH: ${{ inputs.output-path }}
+        RD_RELEASEMAN__GITHUB_CONFIG: ${{ inputs.config }}
+        RD_RELEASEMAN__ZENODO_CONFIG: ${{ inputs.zenodo-config }}
+        RD_RELEASEMAN__GITHUB_TOKEN: ${{ inputs.github-token }}
         RD_RELEASEMAN__ZENODO_TOKEN: ${{ inputs.zenodo-token }}
+        RD_RELEASEMAN__GITHUB_CONTEXT: ${{ toJSON(github) }}
       shell: bash
       run: |
         # Action
         python -m releaseman
-        python "${{ github.action_path }}/action/script/log.py" "3. Finalization"
-        python "${{ github.action_path }}/action/script/log.py" "3.1. Report Upload"
-
-    - name: Report Upload
-      uses: actions/upload-artifact@v4
-      with:
-        path: uploads
-        name: Workflow Results

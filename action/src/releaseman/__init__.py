@@ -1,91 +1,69 @@
 from pathlib import Path
 
 from rich.text import Text
-
 import actionman as _actionman
 import github_contexts as _github_contexts
-from github_contexts.github.enum import EventType as _EventType
 from loggerman import logger as _logger
 import mdit
 
-from proman import exception as _exception, event_handler as _handler
-from proman.output import OutputManager
-from proman.report import Reporter, make_sphinx_target_config
-from proman.dstruct import Token
-
+from releaseman.main import ReleaseManager
+from releaseman.dstruct import Token
+from releaseman.exception import ReleaseManException
+from releaseman.report import Reporter, make_sphinx_target_config
 
 def run():
     _logger.section("Execution")
-
-
-    zenodo_token = Token(_actionman.env_var.read(name="RD_PROMAN__ZENODO_TOKEN", typ=str), name="Zenodo")
+    reporter = Reporter()
     github_context = _github_contexts.github.create(
-        context=_actionman.env_var.read(name="RD_PROMAN__GITHUB_CONTEXT", typ=dict)
+        context=_actionman.env_var.read(name="RD_RELEASEMAN__GITHUB_CONTEXT", typ=dict)
     )
-    reporter = Reporter(github_context=github_context)
-    output_writer = OutputManager()
-    handler_class = event_to_handler.get(github_context.event_name)
     current_log_section_level = _logger.current_section_level
-    if handler_class:
-        try:
-            handler_class(
-                github_context=github_context,
-                reporter=reporter,
-                output_writer=output_writer,
-                admin_token=admin_token,
-                zenodo_token=zenodo_token,
-                path_repo_base=path_repo_base,
-                path_repo_head=path_repo_head,
-            ).run()
-        except _exception.ProManException:
-            _logger.section_end(target_level=current_log_section_level)
-            _finalize(github_context=github_context, reporter=reporter, output_writer=output_writer)
-            return
-        except Exception as e:
-            traceback = _logger.traceback()
-            error_name = e.__class__.__name__
-            _logger.critical(
-                f"Unexpected Error: {error_name}",
-                traceback,
-            )
-            reporter.add(
-                "main",
-                status="fail",
-                summary=f"An unexpected error occurred: `{error_name}`",
-                body=mdit.element.admonition(
-                    title=error_name,
-                    body=traceback,
-                    type="error",
-                    dropdown=True,
-                    opened=True,
-                ),
-            )
-            _logger.section_end(target_level=current_log_section_level)
-            _finalize(github_context=github_context, reporter=reporter, output_writer=output_writer)
-            return
-    else:
-        supported_events = mdit.inline_container(
-            *(mdit.element.code_span(enum.value) for enum in event_to_handler.keys()),
-            separator=", ",
+    release_manager = ReleaseManager(
+        root_path=Path(_actionman.env_var.read(name="RD_RELEASEMAN__ROOT_PATH", typ=str)),
+        output_path=Path(_actionman.env_var.read(name="RD_RELEASEMAN__OUTPUT_PATH", typ=str)),
+        github_config=_actionman.env_var.read(name="RD_RELEASEMAN__GITHUB_CONFIG", typ=dict),
+        zenodo_config=_actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_CONFIG", typ=dict),
+        github_token=Token(_actionman.env_var.read(name="RD_RELEASE__GITHUB_TOKEN", typ=str), name="GitHub"),
+        zenodo_token=Token(_actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_TOKEN", typ=str), name="Zenodo"),
+        github_context=github_context,
+        reporter=reporter,
+    )
+    try:
+        release_manager.run()
+    except ReleaseManException:
+        _logger.section_end(target_level=current_log_section_level)
+        _finalize(github_context=github_context, reporter=reporter)
+        return
+    except Exception as e:
+        traceback = _logger.traceback()
+        error_name = e.__class__.__name__
+        _logger.critical(
+            f"Unexpected Error: {error_name}",
+            traceback,
         )
-        event_description = mdit.inline_container(
-            "Unsupported triggering event ",
-            mdit.element.code_span(github_context.event_name.value),
+        reporter.add(
+            "main",
+            status="fail",
+            summary=f"An unexpected error occurred: `{error_name}`",
+            body=mdit.element.admonition(
+                title=error_name,
+                body=traceback,
+                type="error",
+                dropdown=True,
+                opened=True,
+            ),
         )
-        reporter.event(event_description)
-        summary = mdit.inline_container(
-            "Unsupported triggering event. Supported events are: ",
-            supported_events,
-        )
-        reporter.add("main", status="skip", summary=summary)
-    _finalize(github_context=github_context, reporter=reporter, output_writer=output_writer)
+        _logger.section_end(target_level=current_log_section_level)
+        _finalize(github_context=github_context, reporter=reporter)
+        return
+    _finalize(github_context=github_context, reporter=reporter)
     return
 
 
 @_logger.sectioner("Output Generation")
-def _finalize(github_context: _github_contexts.GitHubContext, reporter: Reporter, output_writer: OutputManager):
-    output = output_writer.generate(failed=reporter.failed)
-    _write_step_outputs(output)
+def _finalize(github_context: _github_contexts.GitHubContext, reporter: Reporter):
+    # output = output_writer.generate(failed=reporter.failed)
+    # _write_step_outputs(output)
 
     report_gha, report_full = reporter.generate()
     _write_step_summary(report_gha)
