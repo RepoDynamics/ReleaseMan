@@ -1,6 +1,6 @@
 rich >= 13.5
 ActionMan == 0.0.0.dev24
-GitHub-Contexts == 0.0.0.dev10
+GitHub-Contexts == 0.0.0.dev12
 LoggerMan == 0.0.0.dev61
 MDit == 0.0.0.dev32
 HTMP == 0.0.0.dev5
