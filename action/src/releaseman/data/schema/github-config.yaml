@@ -1,0 +1,20 @@
+$id: https://controlman.repodynamics.com/schema/issue-role
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Issue Roles
+description: |
+  Default roles for different contributors in an issue.
+type: object
+additionalProperties: false
+properties:
+  submitter:
+    $ref: https://controlman.repodynamics.com/schema/role-priority
+  issue_assignee:
+    $ref: https://controlman.repodynamics.com/schema/role-priority
+  pull_assignee:
+    $ref: https://controlman.repodynamics.com/schema/role-priority
+  review_assignee:
+    $ref: https://controlman.repodynamics.com/schema/role-priority
+  commit_author:
+    $ref: https://controlman.repodynamics.com/schema/role-priority
+  commit_committer:
+    $ref: https://controlman.repodynamics.com/schema/role-priority
