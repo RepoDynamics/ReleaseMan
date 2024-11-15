@@ -3,6 +3,7 @@ from pathlib import Path
 from rich.text import Text
 import actionman as _actionman
 import github_contexts as _github_contexts
+import pylinks
 from loggerman import logger as _logger
 import mdit
 
@@ -10,6 +11,8 @@ from releaseman.main import ReleaseManager
 from releaseman.dstruct import Token
 from releaseman.exception import ReleaseManException
 from releaseman.report import Reporter, make_sphinx_target_config
+from releaseman import data
+
 
 def run():
     _logger.section("Execution")
@@ -17,14 +20,26 @@ def run():
     github_context = _github_contexts.github.create(
         context=_actionman.env_var.read(name="RD_RELEASEMAN__GITHUB_CONTEXT", typ=dict)
     )
+    github_token = Token(_actionman.env_var.read(name="RD_RELEASE__GITHUB_TOKEN", typ=str), name="GitHub")
+    github_config = _actionman.env_var.read(name="RD_RELEASEMAN__GITHUB_CONFIG", typ=dict)
+    if github_config:
+        if not github_token:
+            raise ValueError("GitHub token not provided while GitHub config is provided.")
+        data.validate_schema(github_config, "github")
+    zenodo_token = Token(_actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_TOKEN", typ=str), name="Zenodo")
+    zenodo_config = _actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_CONFIG", typ=dict)
+    if zenodo_config:
+        if not zenodo_token:
+            raise ValueError("Zenodo token not provided while Zenodo config is provided.")
+        data.validate_schema(zenodo_config, "zenodo")
     current_log_section_level = _logger.current_section_level
     release_manager = ReleaseManager(
         root_path=Path(_actionman.env_var.read(name="RD_RELEASEMAN__ROOT_PATH", typ=str)),
         output_path=Path(_actionman.env_var.read(name="RD_RELEASEMAN__OUTPUT_PATH", typ=str)),
-        github_config=_actionman.env_var.read(name="RD_RELEASEMAN__GITHUB_CONFIG", typ=dict),
-        zenodo_config=_actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_CONFIG", typ=dict),
-        github_token=Token(_actionman.env_var.read(name="RD_RELEASE__GITHUB_TOKEN", typ=str), name="GitHub"),
-        zenodo_token=Token(_actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_TOKEN", typ=str), name="Zenodo"),
+        github_config=github_config,
+        zenodo_config=zenodo_config,
+        github_token=github_token,
+        zenodo_token=zenodo_token,
         github_context=github_context,
         reporter=reporter,
     )
