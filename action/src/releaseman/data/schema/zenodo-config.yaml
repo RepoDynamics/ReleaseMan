@@ -1,0 +1,507 @@
+$id: https://releaseman.repodynamics.com/schema/zenodo-config
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Zenodo Configurations
+description: |
+  Configurations for release to Zenodo.
+type: object
+additionalProperties: false
+required: [sandbox, ]
+properties:
+  sandbox:
+    description: |
+      Whether to use Zenodo sandbox instead of the main API.
+      The provided token must be for the specified API.
+    type: boolean
+    default: false
+  deposition_id:
+    title: Deposition ID
+    description: |
+      Deposition ID of an already existing Zenodo record.
+      It is first checked whether this deposition has been already published.
+      If so, a new version for the deposition will be created.
+      Otherwise, i.e., if the deposition is still in draft mode,
+      the deposition will be published.
+      If no deposition ID is specified,
+      a new deposition is created within a new concept.
+    oneOf:
+      - type: integer
+      - $ref: https://jsonschemata.repodynamics.com/string/nonempty
+  delete_assets:
+    description: |
+      If deposition ID is provided, files specified here will be deleted
+      from the deposition before uploading new files.
+      The value can either be "all" to delete all files,
+      or an array of filenames to delete.
+    oneOf:
+      - type: string
+        enum: [all]
+      - $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+  metadata:
+    type: object
+    required:
+      - upload_type
+      - title
+      - creators
+      - description
+      - access_right
+    properties:
+      upload_type:
+        description: |
+          Type of the deposition.
+        type: string
+        enum:
+          - dataset
+          - image
+          - lesson
+          - other
+          - physicalobject
+          - poster
+          - presentation
+          - publication
+          - software
+          - video
+      publication_type:
+        description: |
+          Type of the publication.
+          This is only required if `upload_type` is `publication`.
+        type: string
+        enum:
+          - annotationcollection
+          - article
+          - book
+          - conferencepaper
+          - datamanagementplan
+          - deliverable
+          - milestone
+          - other
+          - patent
+          - preprint
+          - proposal
+          - report
+          - section
+          - softwaredocumentation
+          - taxonomictreatment
+          - technicalnote
+          - thesis
+          - workingpaper
+      image_type:
+        description: |
+          Type of the image.
+          This is only required if `upload_type` is `image`.
+        type: string
+        enum:
+          - diagram
+          - drawing
+          - figure
+          - other
+          - photo
+          - plot
+      publication_date:
+        description: |
+          Date of publication in ISO8601 format (YYYY-MM-DD).
+          Defaults to current date.
+        $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+      title:
+        description: |
+          Title of the deposition.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      creators:
+        description: |
+          Core creators/authors of the deposition, ordered by contribution (highest first).
+        type: array
+        minItems: 1
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required: [ name ]
+          properties:
+            name:
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            affiliation:
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            orcid:
+              $ref: https://jsonschemata.repodynamics.com/id/orcid
+            gnd:
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      description:
+        description: |
+          Description of the deposition.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      access_right:
+        description: |
+          Access rights for the project:
+          * `open`: Open Access
+          * `embargoed`: Embargoed Access
+          * `restricted`: Restricted Access
+          * `closed`: Closed Access
+        type: string
+        enum: [ open, embargoed, restricted, closed ]
+        default: open
+      license:
+        description: |
+          SPDX license ID of the project.
+          This is required if `access_right` is `open` or `embargoed`.
+          Note that Zenodo only accepts a single license ID.
+        $ref: https://jsonschemata.repodynamics.com/id/spdx-license
+      embargo_date:
+        description: |
+          Date when the embargo will be lifted.
+          This is only required if `access_right` is `embargoed`.
+        $ref: https://jsonschemata.repodynamics.com/date/yyyy-mm-dd
+      access_conditions:
+        title: Access Conditions
+        description: |
+          Conditions for accessing the project.
+          This is only required if `access_right` is `restricted`.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      doi:
+        $ref: https://jsonschemata.repodynamics.com/id/doi
+      preserve_doi:
+        type: boolean
+      keywords:
+        description: |
+          Free-form keywords for the deposition.
+          These are used to help users find the project.
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+      notes:
+        title: Notes
+        description: |
+          Additional notes about the citation.
+        $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      related_identifiers:
+        title: Related Identifiers
+        description: |
+          List of related identifiers for the project.
+        type: array
+        uniqueItems: true
+        items:
+          title: Related Identifier
+          description: An identifier related to the work.
+          type: object
+          additionalProperties: false
+          required: [ identifier, relation ]
+          properties:
+            identifier:
+              description: |
+                The value of the identifier.
+                Supported identifiers include:
+                DOI, Handle, ARK, PURL, ISSN, ISBN, PubMed ID, PubMed Central ID, ADS Bibliographic Code,
+                arXiv, Life Science Identifiers (LSID), EAN-13, ISTC, URNs and URLs.
+              examples:
+                - 10.5281/zenodo.1003150
+                - https://example.com
+            relation:
+              title: Relation
+              description: |
+                The relation of the identifier to the work.
+              type: string
+              enum:
+                - isCitedBy
+                - cites
+                - isSupplementTo
+                - isSupplementedBy
+                - isContinuedBy
+                - continues
+                - isDescribedBy
+                - describes
+                - hasMetadata
+                - isMetadataFor
+                - isNewVersionOf
+                - isPreviousVersionOf
+                - isPartOf
+                - hasPart
+                - isReferencedBy
+                - references
+                - isDocumentedBy
+                - documents
+                - isCompiledBy
+                - compiles
+                - isVariantFormOf
+                - isOriginalFormof
+                - isIdenticalTo
+                - isAlternateIdentifier
+                - isReviewedBy
+                - reviews
+                - isDerivedFrom
+                - isSourceOf
+                - requires
+                - isRequiredBy
+                - isObsoletedBy
+                - obsoletes
+            resource_type:
+              title: Resource Type
+              description: |
+                The type of the resource identified by the identifier.
+              type: string
+              enum:
+                - software
+                - poster
+                - presentation
+                - dataset
+                - video
+                - lesson
+                - physicalobject
+                - other
+                - image-figure
+                - image-plot
+                - image-drawing
+                - image-diagram
+                - image-photo
+                - image-other
+                - publication-annotationcollection
+                - publication-book
+                - publication-section
+                - publication-conferencepaper
+                - publication-datamanagementplan
+                - publication-article
+                - publication-patent
+                - publication-preprint
+                - publication-deliverable
+                - publication-milestone
+                - publication-proposal
+                - publication-report
+                - publication-softwaredocumentation
+                - publication-taxonomictreatment
+                - publication-technicalnote
+                - publication-thesis
+                - publication-workingpaper
+                - publication-other
+      contributors:
+        title: Contributors
+        description: |
+          Other contributors of the project.
+        type: array
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required: [ type, name ]
+          properties:
+            type:
+              type: string
+              enum:
+                - ContactPerson
+                - DataCollector
+                - DataCurator
+                - DataManager
+                - Distributor
+                - Editor
+                - HostingInstitution
+                - Producer
+                - ProjectLeader
+                - ProjectManager
+                - ProjectMember
+                - RegistrationAgency
+                - RegistrationAuthority
+                - RelatedPerson
+                - Researcher
+                - ResearchGroup
+                - RightsHolder
+                - Supervisor
+                - Sponsor
+                - WorkPackageLeader
+                - Other
+            name:
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            affiliation:
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            orcid:
+              $ref: https://jsonschemata.repodynamics.com/id/orcid
+            gnd:
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      references:
+        description: |
+          List of references for the project.
+        $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+      communities:
+        description: |
+          ID list of Zenodo communities you wish the project to appear in.
+          The owner of the communities will be notified,
+          and can either accept or reject your request.
+        examples:
+          - [ ecfunded ]
+        type: array
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required: [ identifier ]
+          properties:
+            identifier:
+              $ref: https://jsonschemata.repodynamics.com/string/oneline
+      grants:
+        title: Grants
+        description: |
+          List of OpenAIRE-supported grants funding the research for this project.
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          title: Grant ID
+          description: |
+            Can be either a funder-DOI-prefixed grant ID or a European Commission grant ID.
+          type: object
+          additionalProperties: false
+          required: [ id ]
+          properties:
+            id:
+              $ref: https://jsonschemata.repodynamics.com/string/oneline
+      subjects:
+        title: Subjects
+        description: |
+          Project subjects from a taxonomy or controlled vocabulary.
+        examples:
+          - - term: Astronomy
+              id: http://id.loc.gov/authorities/subjects/sh85009003
+              scheme: url
+        type: array
+        uniqueItems: true
+        minItems: 1
+        items:
+          title: Subject
+          description: A subject from a taxonomy or controlled vocabulary.
+          type: object
+          additionalProperties: false
+          required: [ term, identifier ]
+          properties:
+            term:
+              description: Term from a taxonomy or controlled vocabulary.
+              type: string
+              minLength: 1
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            identifier:
+              description: ID of the term from a taxonomy or controlled vocabulary.
+              type: string
+              minLength: 1
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+            scheme:
+              description: Scheme of the term from a taxonomy or controlled vocabulary.
+              type: string
+              minLength: 1
+              $ref: https://jsonschemata.repodynamics.com/string/nonempty
+      version:
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+      language:
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+      imprint_publisher:
+        default: |
+          Publisher of the deposition. Defaults to 'Zenodo'.
+          The publisher is used to formulate the citation,
+          so consider the prominence of the role.
+        $ref: https://jsonschemata.repodynamics.com/string/oneline
+        examples:
+          - Zenodo
+      custom:
+        description: |
+          Additional publication-type-specific fields.
+        type: object
+        properties:
+          "code:codeRepository":
+            title: Code Repository
+            $ref: https://jsonschemata.repodynamics.com/url/http-ftp-sftp
+          "code:programmingLanguage":
+            type: array
+            uniqueItems: true
+            items:
+              type: object
+              required: [ id ]
+              properties:
+                id:
+                  description: |
+                    ID of a used programming language.
+                  $ref: https://jsonschemata.repodynamics.com/string/oneline
+                  examples:
+                    - python
+                    - java
+          "code:developmentStatus":
+            type: object
+            required: [ id ]
+            properties:
+              id:
+                type: string
+                enum:
+                  - wip
+                  - unsupported
+                  - inactive
+                  - suspended
+                  - moved
+                  - concept
+                  - abandoned
+                  - active
+    allOf:
+      - if:
+          properties:
+            upload_type:
+              const: publication
+          then:
+            required: [ publication_type ]
+      - if:
+          properties:
+            upload_type:
+              const: image
+          then:
+            required: [ image_type ]
+      - if:
+          properties:
+            access_right:
+              enum: [ embargoed, open ]
+          then:
+            required: [ license ]
+      - if:
+          properties:
+            access_right:
+              const: embargoed
+          then:
+            required: [ embargo_date ]
+      - if:
+          properties:
+            access_right:
+              const: restricted
+          then:
+            required: [ access_conditions ]
+  assets:
+    description: Assets to upload.
+    type: array
+    uniqueItems: true
+    items:
+      title: Asset
+      description: A single asset to upload.
+      type: object
+      required: [ files ]
+      properties:
+        name:
+          description: Name of the asset on Zenodo.
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        files:
+          description: |
+            Files to include in the asset.
+          type: array
+          items:
+            type: object
+            required: [ source, destination ]
+            properties:
+              source:
+                description: |
+                  Path to a file or directory relative to the current working directory.
+                type: string
+              pattern:
+                description: |
+                  A regex pattern to match against files in source, when source is a directory.
+                  If not specified, the entire directory is selected.
+                type: string
+              destination:
+                description: Destination path of the selected files relative to the root of the archive file.
+                type: string
+                default: '.'
+        format:
+          description: |
+            Archive format for the asset.
+            If the entire asset contains a single file,
+            then this can be omitted,
+            in which case the file will be uploaded as is.
+          type: string
+          enum: [ zip, tar, tar.gz, tar.bz2, tar.xz, gz, bz2, xz ]
+  publish:
+    type: boolean
+    default: true
