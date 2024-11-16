@@ -12,6 +12,7 @@ import lzma
 from pathlib import Path
 
 import pylinks as pl
+from loggerman import logger
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -42,6 +43,16 @@ class ReleaseManager:
         self.gh_context = github_context
         self.reporter = reporter
 
+        if self.config_zenodo:
+            self.api_zenodo = pl.api.zenodo(
+                token=self.zenodo_token.get(),
+                sandbox=self.config_zenodo.get("sandbox", False)
+            )
+            try:
+                self.api_zenodo.deposition_list()
+            except Exception as e:
+                raise ValueError("Zenodo token is not valid") from e
+
         self.mime_type = {
             'tar': "application/x-tar",
             'gz': "application/gzip",
@@ -63,51 +74,84 @@ class ReleaseManager:
             self.create_zenodo_deposition()
         return
 
-    def create_github_release(self):
-        gh_api = pl.api.github(
-            token=self.gh_token.get() or self.gh_context.token
-        ).user(self.gh_context.repository_owner).repo(self.gh_context.repository_name)
-        release_response = gh_api.release_create(
-            tag_name=self.config_gh["tag_name"],
-            name=self.config_gh["name"],
-            body=self.config_gh["body"],
-            draft=self.config_gh["draft"],
-            prerelease=self.config_gh["prerelease"],
-            discussion_category_name=self.config_gh["discussion_category_name"],
-            make_latest=self.config_gh["make_latest"],
-        )
-        for asset_id, asset in self.config_gh["asset"].items():
-            filepath, mime_type = self.make_release_assets(
-                files=asset["files"],
-                out_dir = self.path_out / "github",
-                name=asset.get("name"),
-                output_format=asset.get("output_format"),
-            )
-            upload_response = gh_api.release_asset_upload(
-                release_id=release_response["id"],
-                filepath=filepath,
-                mime_type=mime_type or asset["media_type"],
-                name=asset.get("name", filepath.name),
-                label=asset.get("label", ""),
+
+
+    def create_zenodo_deposition(self):
+        depo_id = self.config_zenodo.get("deposition_id")
+        metadata = self.config_zenodo.get("metadata")
+        if depo_id:
+            depo_data = self.api_zenodo.deposition_retrieve(deposition_id=depo_id)
+            if depo_data["submitted"]:
+                if not metadata:
+                    raise ValueError("Metadata is not provided for new deposition.")
+                depo = self.api_zenodo.deposition_new_version(deposition_id=depo_id)
+            else:
+                depo = depo_data
+            if metadata:
+                self.api_zenodo.deposition_update(deposition_id=depo["id"], metadata=metadata)
+            self.remove_zenodo_files(depo)
+        else:
+            if not metadata:
+                raise ValueError("Metadata is not provided for new deposition.")
+            depo = self.api_zenodo.deposition_create(metadata=metadata)
+        self.add_zenodo_files(depo)
+        if self.config_zenodo["publish"]:
+            release_response = self.api_zenodo.deposition_publish(deposition_id=depo["id"])
+            logger.success(
+                "Zenodo Release",
+                str(release_response),
             )
         return
 
-    def create_zenodo_deposition(self):
-        zenodo_api = pl.api.zenodo(token=self.zenodo_token.get())
-        for asset_id, asset in self.config_zenodo["asset"].items():
+    def add_zenodo_files(self, deposition: dict):
+        assets = self.config_zenodo.get("assets")
+        if not assets:
+            logger.info(
+                "Zenodo Asset Upload",
+                "No files provided."
+            )
+            return
+        for asset in assets:
             filepath, _ = self.make_release_assets(
                 files=asset["files"],
                 out_dir = self.path_out / "zenodo",
                 name=asset.get("name"),
-                output_format=asset.get("output_format"),
+                output_format=asset.get("format"),
             )
-            upload_response = zenodo_api.file_create(
-                bucket_url=self.config_zenodo["bucket_url"],
+            filename = asset.get("name", filepath.name)
+            upload_response = self.api_zenodo.file_create(
+                bucket_id=deposition["links"]["bucket"],
                 filepath=filepath,
-                upload_path=asset.get("name", filepath.name),
+                name=filename,
             )
-        release_response = zenodo_api.deposition_publish(deposition_id=self.config_zenodo["deposition_id"])
+            logger.info(
+                f"Zenodo Asset Upload: {filename}",
+                str(upload_response),
+            )
         return
+
+    def remove_zenodo_files(self, deposition: dict):
+        files_to_delete = self.config_zenodo.get("delete_assets")
+        if files_to_delete:
+            if isinstance(files_to_delete, list):
+                old_filenames = [file["filename"] for file in deposition["files"]]
+                for file_to_delete in files_to_delete:
+                    if file_to_delete not in old_filenames:
+                        raise ValueError(
+                            f"Cannot delete old version file '{file_to_delete}' as it does not exist."
+                        )
+                for old_file in deposition["files"]:
+                    if old_file["filename"] in files_to_delete:
+                        self.api_zenodo.file_delete(
+                            deposition_id=deposition["id"],
+                            file_id=old_file["id"]
+                        )
+            else:
+                for old_file in deposition["files"]:
+                    self.api_zenodo.file_delete(deposition_id=deposition["id"], file_id=old_file["id"])
+        return
+
+
 
     def make_release_assets(
         self,
@@ -172,3 +216,106 @@ class ReleaseManager:
             with open(copied_paths[0], 'rb') as f_in, compression_module.open(archive_path, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
             return archive_path, self.mime_type[output_format]
+
+
+class GitHubRelease:
+
+    def __init__(
+        self,
+        root_path: Path,
+        output_path: Path,
+        config: dict,
+        token: Token,
+        reporter: Reporter,
+        context: GitHubContext,
+    ):
+        self.path_root = root_path
+        self.path_out = output_path
+        self.config = config
+        self.token = token
+        self.reporter = reporter
+        self.api = pl.api.github(
+            token=token.get() or context.token
+        ).user(
+            config.get("repo_owner", context.repository_owner)
+        ).repo(
+            config.get("repo_name", context.repository_name)
+        )
+        return
+
+    def run(self):
+        release_id = self.config.get("release_id")
+        release_data = {
+            k: v for k, v in self.config.items()
+            if k not in ("repo_owner", "repo_name", "release_id", "delete_assets", "assets") and v is not None
+        }
+        if release_id:
+            self.remove_files(release_id)
+            self.add_files(release_id)
+            release_data.pop("generate_release_notes", None)
+            if release_data:
+                response = self.api.release_update(release_id=release_id, **release_data)
+                logger.success(
+                    "GitHub Release Update",
+                    str(response)
+                )
+            return
+        release_response = self.api.release_create(**release_data)
+        logger.success(
+            "GitHub Release Creation",
+            str(release_response)
+        )
+        self.add_files(release_response["id"])
+        return
+
+    def remove_files(self, release_id: int):
+        assets_to_del = self.config.get("delete_assets")
+        if not assets_to_del:
+            logger.info(
+                "GitHub Asset Deletion",
+                "No assets provided."
+            )
+            return
+        asset_ids = [asset["id"] for asset in self.api.release_asset_list(release_id)]
+        if isinstance(assets_to_del, list):
+            for asset_to_del in assets_to_del:
+                if asset_to_del not in asset_ids:
+                    raise ValueError(
+                        f"Cannot delete old version file '{asset_to_del}' as it does not exist."
+                    )
+            for asset_id in asset_ids:
+                if asset_id in assets_to_del:
+                    self.api.release_asset_delete(asset_id)
+        else:
+            for asset_id in asset_ids:
+                self.api.release_asset_delete(asset_id)
+        return
+
+    def add_files(self, release_id: int):
+        assets = self.config.get("assets")
+        if not assets:
+            logger.info(
+                "GitHub Asset Upload",
+                "No assets provided."
+            )
+            return
+        for asset in assets:
+            filepath, mime_type = self.make_release_assets(
+                files=asset["files"],
+                out_dir = self.path_out / "github",
+                name=asset.get("name"),
+                output_format=asset.get("format"),
+            )
+            filename = asset.get("name", filepath.name)
+            upload_response = self.api.release_asset_upload(
+                release_id=release_id,
+                filepath=filepath,
+                mime_type=mime_type or asset["media_type"],
+                name=filename,
+                label=asset.get("label", "")
+            )
+            logger.info(
+                f"GitHub Asset Upload: {filename}",
+                str(upload_response),
+            )
+        return
