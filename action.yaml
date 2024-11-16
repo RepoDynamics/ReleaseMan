@@ -21,12 +21,20 @@ inputs:
     description: Configurations for Zenodo release
     required: false
     default: ""
+  zenodo-sandbox-config:
+    description: Configurations for Zenodo Sandbox release
+    required: false
+    default: ""
   github-token:
     description: A personal access token.
     required: false
     default: ""
   zenodo-token:
     description: A Zenodo API token.
+    required: false
+    default: ""
+  zenodo-sandbox-token:
+    description: A Zenodo Sandbox API token.
     required: false
     default: ""
 
