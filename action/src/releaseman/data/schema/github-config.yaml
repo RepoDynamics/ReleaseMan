@@ -1,20 +1,95 @@
-$id: https://controlman.repodynamics.com/schema/issue-role
+$id: https://releaseman.repodynamics.com/schema/github-config
 $schema: https://json-schema.org/draft/2020-12/schema
-title: Issue Roles
+title: GitHub Release Configurations
 description: |
-  Default roles for different contributors in an issue.
+  Configurations for release to GitHub.
 type: object
 additionalProperties: false
+anyOf:
+  - required: [release_id]
+  - required: [tag_name]
 properties:
-  submitter:
-    $ref: https://controlman.repodynamics.com/schema/role-priority
-  issue_assignee:
-    $ref: https://controlman.repodynamics.com/schema/role-priority
-  pull_assignee:
-    $ref: https://controlman.repodynamics.com/schema/role-priority
-  review_assignee:
-    $ref: https://controlman.repodynamics.com/schema/role-priority
-  commit_author:
-    $ref: https://controlman.repodynamics.com/schema/role-priority
-  commit_committer:
-    $ref: https://controlman.repodynamics.com/schema/role-priority
+  repo_owner:
+    type: string
+  repo_name:
+    type: string
+  release_id:
+    type: integer
+  tag_name:
+    type: string
+  target_commitish:
+    type: string
+  name:
+    type: string
+  body:
+    type: string
+  draft:
+    type: boolean
+  prerelease:
+    type: boolean
+  discussion_category_name:
+    type: string
+  generate_release_notes:
+    type: boolean
+  make_latest:
+    type: string
+    enum: ["true", "false", "legacy"]
+  delete_assets:
+    description: |
+      If release ID is provided, files specified here will be deleted
+      from the release before uploading new files.
+      The value can either be "all" to delete all files,
+      or an array of asset IDs to delete.
+    oneOf:
+      - type: string
+        enum: [ all ]
+      - $ref: https://jsonschemata.repodynamics.com/array/unique-strings
+  assets:
+    description: Assets to upload.
+    type: array
+    uniqueItems: true
+    items:
+      title: Asset
+      description: A single asset to upload.
+      type: object
+      required: [ files ]
+      oneOf:
+        - required: [ format ]
+        - required: [ media_type ]
+      properties:
+        name:
+          description: Name of the asset on GitHub.
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        label:
+          $ref: https://jsonschemata.repodynamics.com/string/oneline
+        files:
+          description: |
+            Files to include in the asset.
+          type: array
+          items:
+            type: object
+            required: [ source, destination ]
+            properties:
+              source:
+                description: |
+                  Path to a file or directory relative to the current working directory.
+                type: string
+              pattern:
+                description: |
+                  A regex pattern to match against files in source, when source is a directory.
+                  If not specified, the entire directory is selected.
+                type: string
+              destination:
+                description: Destination path of the selected files relative to the root of the archive file.
+                type: string
+                default: '.'
+        format:
+          description: |
+            Archive format for the asset.
+            If the entire asset contains a single file,
+            then this can be omitted,
+            in which case the file will be uploaded as is.
+          type: string
+          enum: [ zip, tar, tar.gz, tar.bz2, tar.xz, gz, bz2, xz ]
+        media_type:
+          type: string
