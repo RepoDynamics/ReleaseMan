@@ -5,7 +5,6 @@ description: |
   Configurations for release to Zenodo.
 type: object
 additionalProperties: false
-required: [ sandbox ]
 properties:
   deposition_id:
     title: Deposition ID
