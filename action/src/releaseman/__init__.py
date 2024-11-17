@@ -26,10 +26,6 @@ def run():
         except Exception as e:
             traceback = _logger.traceback()
             error_name = e.__class__.__name__
-            _logger.critical(
-                f"Unexpected Error: {error_name}",
-                traceback,
-            )
             reporter.add(
                 "github" if isinstance(manager, GitHubRelease) else "zenodo",
                 status="fail",
@@ -44,6 +40,10 @@ def run():
             )
             _logger.section_end(target_level=current_log_section_level)
             _finalize(github_context=github_context, reporter=reporter)
+            _logger.critical(
+                f"Unexpected Error: {error_name}",
+                traceback,
+            )
             return False
         return True
 
