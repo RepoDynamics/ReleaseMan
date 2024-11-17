@@ -15,7 +15,7 @@ _schema_dir_path = pkgdata.get_package_path_from_caller(top_level=False) / "sche
 
 
 def validate_schema(data: dict, name: Literal["github", "zenodo"]):
-    schema = pyserials.read.json_from_file(_schema_dir_path / f"{name}-config.yaml")
+    schema = pyserials.read.yaml_from_file(_schema_dir_path / f"{name}-config.yaml")
     jsonschemata.edit.required_last(schema)
     pyserials.validate.jsonschema(
         data=data,
