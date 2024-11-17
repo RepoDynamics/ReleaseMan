@@ -31,7 +31,7 @@ def run():
                 traceback,
             )
             reporter.add(
-                "main",
+                "github" if isinstance(manager, GitHubRelease) else "zenodo",
                 status="fail",
                 summary=f"An unexpected error occurred: `{error_name}`",
                 body=mdit.element.admonition(
