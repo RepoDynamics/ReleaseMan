@@ -60,7 +60,7 @@ def run():
         ("ZENODO", "Zenodo", "zenodo"),
         ("ZENODO_SANDBOX", "Zenodo Sandbox", "zenodo")
     ):
-        token = Token(_actionman.env_var.read(name=f"RD_RELEASE__{env_var_segment}_TOKEN", typ=str), name=name)
+        token = Token(_actionman.env_var.read(name=f"RD_RELEASEMAN__{env_var_segment}_TOKEN", typ=str), name=name)
         config = _actionman.env_var.read(name=f"RD_RELEASEMAN__{env_var_segment}_CONFIG", typ=dict)
         if config:
             if not token and name != "GitHub":
