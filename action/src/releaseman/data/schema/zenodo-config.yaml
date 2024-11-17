@@ -5,14 +5,8 @@ description: |
   Configurations for release to Zenodo.
 type: object
 additionalProperties: false
-required: [sandbox, ]
+required: [ sandbox ]
 properties:
-  sandbox:
-    description: |
-      Whether to use Zenodo sandbox instead of the main API.
-      The provided token must be for the specified API.
-    type: boolean
-    default: false
   deposition_id:
     title: Deposition ID
     description: |
