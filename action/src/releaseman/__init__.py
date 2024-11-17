@@ -3,11 +3,11 @@ from pathlib import Path
 from rich.text import Text
 import actionman as _actionman
 import github_contexts as _github_contexts
-import pylinks
 from loggerman import logger as _logger
 import mdit
 
-from releaseman.main import ReleaseManager
+from releaseman.github import GitHubRelease
+from releaseman.zenodo import ZenodoRelease
 from releaseman.dstruct import Token
 from releaseman.exception import ReleaseManException
 from releaseman.report import Reporter, make_sphinx_target_config
@@ -15,62 +15,84 @@ from releaseman import data
 
 
 def run():
+
+    def run_manager(manager: GitHubRelease | ZenodoRelease):
+        try:
+            manager.run()
+        except ReleaseManException:
+            _logger.section_end(target_level=current_log_section_level)
+            _finalize(github_context=github_context, reporter=reporter)
+            return False
+        except Exception as e:
+            traceback = _logger.traceback()
+            error_name = e.__class__.__name__
+            _logger.critical(
+                f"Unexpected Error: {error_name}",
+                traceback,
+            )
+            reporter.add(
+                "main",
+                status="fail",
+                summary=f"An unexpected error occurred: `{error_name}`",
+                body=mdit.element.admonition(
+                    title=error_name,
+                    body=traceback,
+                    type="error",
+                    dropdown=True,
+                    opened=True,
+                ),
+            )
+            _logger.section_end(target_level=current_log_section_level)
+            _finalize(github_context=github_context, reporter=reporter)
+            return False
+        return True
+
     _logger.section("Execution")
     reporter = Reporter()
     github_context = _github_contexts.github.create(
         context=_actionman.env_var.read(name="RD_RELEASEMAN__GITHUB_CONTEXT", typ=dict)
     )
-    github_token = Token(_actionman.env_var.read(name="RD_RELEASE__GITHUB_TOKEN", typ=str), name="GitHub")
-    github_config = _actionman.env_var.read(name="RD_RELEASEMAN__GITHUB_CONFIG", typ=dict)
-    if github_config:
-        if not github_token:
-            raise ValueError("GitHub token not provided while GitHub config is provided.")
-        data.validate_schema(github_config, "github")
-    zenodo_token = Token(_actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_TOKEN", typ=str), name="Zenodo")
-    zenodo_config = _actionman.env_var.read(name="RD_RELEASEMAN__ZENODO_CONFIG", typ=dict)
-    if zenodo_config:
-        if not zenodo_token:
-            raise ValueError("Zenodo token not provided while Zenodo config is provided.")
-        data.validate_schema(zenodo_config, "zenodo")
+    root_path = Path(_actionman.env_var.read(name="RD_RELEASEMAN__ROOT_PATH", typ=str))
+    output_path = Path(_actionman.env_var.read(name="RD_RELEASEMAN__OUTPUT_PATH", typ=str))
+    inputs = {}
+    for env_var_segment, name, validation_name in (
+        ("GITHUB", "GitHub", "github"),
+        ("ZENODO", "Zenodo", "zenodo"),
+        ("ZENODO_SANDBOX", "Zenodo Sandbox", "zenodo")
+    ):
+        token = Token(_actionman.env_var.read(name=f"RD_RELEASE__{env_var_segment}_TOKEN", typ=str), name=name)
+        config = _actionman.env_var.read(name=f"RD_RELEASEMAN__{env_var_segment}_CONFIG", typ=dict)
+        if config:
+            if not token:
+                raise ValueError(f"{name} token not provided while config is provided.")
+            data.validate_schema(config, validation_name)
+            inputs[env_var_segment.lower()] = {"token": token, "config": config}
+
     current_log_section_level = _logger.current_section_level
-    release_manager = ReleaseManager(
-        root_path=Path(_actionman.env_var.read(name="RD_RELEASEMAN__ROOT_PATH", typ=str)),
-        output_path=Path(_actionman.env_var.read(name="RD_RELEASEMAN__OUTPUT_PATH", typ=str)),
-        github_config=github_config,
-        zenodo_config=zenodo_config,
-        github_token=github_token,
-        zenodo_token=zenodo_token,
-        github_context=github_context,
-        reporter=reporter,
-    )
-    try:
-        release_manager.run()
-    except ReleaseManException:
-        _logger.section_end(target_level=current_log_section_level)
-        _finalize(github_context=github_context, reporter=reporter)
-        return
-    except Exception as e:
-        traceback = _logger.traceback()
-        error_name = e.__class__.__name__
-        _logger.critical(
-            f"Unexpected Error: {error_name}",
-            traceback,
+
+    for release_type in ("zenodo_sandbox", "zenodo"):
+        if release_type in inputs:
+            release_manager = ZenodoRelease(
+                root_path=root_path,
+                output_path=output_path,
+                sandbox=release_type == "zenodo_sandbox",
+                reporter=reporter,
+                **inputs[release_type]
+            )
+            success = run_manager(release_manager)
+            if not success:
+                return
+    if "github" in inputs:
+        release_manager = GitHubRelease(
+            root_path=root_path,
+            output_path=output_path,
+            reporter=reporter,
+            context=github_context,
+            **inputs["github"]
         )
-        reporter.add(
-            "main",
-            status="fail",
-            summary=f"An unexpected error occurred: `{error_name}`",
-            body=mdit.element.admonition(
-                title=error_name,
-                body=traceback,
-                type="error",
-                dropdown=True,
-                opened=True,
-            ),
-        )
-        _logger.section_end(target_level=current_log_section_level)
-        _finalize(github_context=github_context, reporter=reporter)
-        return
+        success = run_manager(release_manager)
+        if not success:
+            return
     _finalize(github_context=github_context, reporter=reporter)
     return
 
