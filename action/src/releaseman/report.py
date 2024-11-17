@@ -150,6 +150,7 @@ def initialize_logger(
 ):
     logger.initialize(
         realtime_levels=list(range(1, 7)),
+        exit_code_critical=1,
         github=True,
         github_debug=True,
         title_number=title_number,
