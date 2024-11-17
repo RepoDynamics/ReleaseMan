@@ -72,6 +72,7 @@ def run():
 
     for release_type in ("zenodo_sandbox", "zenodo"):
         if release_type in inputs:
+            _logger.section(release_type.replace("_", " ").title())
             release_manager = ZenodoRelease(
                 root_path=root_path,
                 output_path=output_path,
@@ -82,7 +83,9 @@ def run():
             success = run_manager(release_manager)
             if not success:
                 return
+            _logger.section_end()
     if "github" in inputs:
+        _logger.section("GitHub Release")
         release_manager = GitHubRelease(
             root_path=root_path,
             output_path=output_path,
@@ -93,6 +96,7 @@ def run():
         success = run_manager(release_manager)
         if not success:
             return
+        _logger.section_end()
     _finalize(github_context=github_context, reporter=reporter)
     return
 
