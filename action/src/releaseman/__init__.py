@@ -63,7 +63,7 @@ def run():
         token = Token(_actionman.env_var.read(name=f"RD_RELEASE__{env_var_segment}_TOKEN", typ=str), name=name)
         config = _actionman.env_var.read(name=f"RD_RELEASEMAN__{env_var_segment}_CONFIG", typ=dict)
         if config:
-            if not token:
+            if not token and name != "GitHub":
                 raise ValueError(f"{name} token not provided while config is provided.")
             data.validate_schema(config, validation_name)
             inputs[env_var_segment.lower()] = {"token": token, "config": config}
