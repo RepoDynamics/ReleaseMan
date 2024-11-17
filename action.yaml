@@ -83,8 +83,10 @@ runs:
         RD_RELEASEMAN__OUTPUT_PATH: ${{ inputs.output-path }}
         RD_RELEASEMAN__GITHUB_CONFIG: ${{ inputs.config }}
         RD_RELEASEMAN__ZENODO_CONFIG: ${{ inputs.zenodo-config }}
+        RD_RELEASEMAN__ZENODO_SANDBOX_CONFIG: ${{ inputs.zenodo-sandbox-config }}
         RD_RELEASEMAN__GITHUB_TOKEN: ${{ inputs.github-token }}
         RD_RELEASEMAN__ZENODO_TOKEN: ${{ inputs.zenodo-token }}
+        RD_RELEASEMAN__ZENODO_SANDBOX_TOKEN: ${{ inputs.zenodo-sandbox-token }}
         RD_RELEASEMAN__GITHUB_CONTEXT: ${{ toJSON(github) }}
       shell: bash
       run: |
