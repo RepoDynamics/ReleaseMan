@@ -1,7 +1,7 @@
 rich >= 13.5
 ActionMan == 0.0.0.dev24
 GitHub-Contexts == 0.0.0.dev13
-LoggerMan == 0.0.0.dev64
+LoggerMan == 0.0.0.dev65
 MDit == 0.0.0.dev35
 HTMP == 0.0.0.dev5
 PyLinks == 0.0.0.dev48
