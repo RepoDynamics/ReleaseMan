@@ -17,17 +17,17 @@ namespaces = true
 # ----------------------------------------- Project Metadata -------------------------------------
 #
 [project]
-version = "0.0.0.dev11"
+version = "0.0.0.dev12"
 name = "ReleaseMan"
 dependencies = [
     "rich >= 13.5",
     "ActionMan == 0.0.0.dev24",
-    "GitHub-Contexts == 0.0.0.dev13",
-    "LoggerMan == 0.0.0.dev66",
-    "MDit == 0.0.0.dev36",
+    "GitHub-Contexts == 0.0.0.dev14",
+    "LoggerMan == 0.0.0.dev67",
+    "MDit == 0.0.0.dev37",
     "HTMP == 0.0.0.dev5",
-    "PyLinks == 0.0.0.dev49",
-    "PySerials == 0.0.0.dev39",
+    "PyLinks == 0.0.0.dev50",
+    "PySerials == 0.0.0.dev40",
     "FileEx == 0.0.0.dev1",
 ]
 requires-python = ">=3.10"
