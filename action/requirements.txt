@@ -1,9 +1,9 @@
 rich >= 13.5
 ActionMan == 0.0.0.dev24
 GitHub-Contexts == 0.0.0.dev21
-LoggerMan == 0.0.0.dev84
-MDit == 0.0.0.dev54
+LoggerMan == 0.0.0.dev85
+MDit == 0.0.0.dev55
 HTMP == 0.0.0.dev5
-PyLinks == 0.0.0.dev67
-PySerials == 0.0.0.dev57
+PyLinks == 0.0.0.dev68
+PySerials == 0.0.0.dev58
 FileEx == 0.0.0.dev1
